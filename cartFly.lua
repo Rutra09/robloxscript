@@ -4,8 +4,8 @@ local screenGui = Instance.new("ScreenGui", player.PlayerGui)
 
 -- Main Frame
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 300, 0, 200)
-frame.Position = UDim2.new(0.5, -150, 0.5, -100)
+frame.Size = UDim2.new(0, 300, 0, 280) -- Height set to 280
+frame.Position = UDim2.new(0.5, -150, 0.5, -140) -- Centered
 frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
 frame.BackgroundTransparency = 0.3
 frame.Active = true
@@ -21,6 +21,10 @@ blurBackground.Size = UDim2.new(1, 0, 1, 0)
 blurBackground.BackgroundColor3 = Color3.new(0, 0, 0)
 blurBackground.BackgroundTransparency = 0.5
 blurBackground.ZIndex = 0 -- Ensure it's behind other elements
+
+-- Add rounded corners to the blur background
+local blurCorner = Instance.new("UICorner", blurBackground)
+blurCorner.CornerRadius = UDim.new(0, 12)
 
 -- Add a BlurEffect to the background
 local blur = Instance.new("BlurEffect", blurBackground)
@@ -40,69 +44,76 @@ titleBar.ZIndex = 2 -- Ensure it's above the blur background
 local titleCorner = Instance.new("UICorner", titleBar)
 titleCorner.CornerRadius = UDim.new(0, 12)
 
--- Levitate Speed Input
-local levitateSpeedLabel = Instance.new("TextLabel", frame)
-levitateSpeedLabel.Size = UDim2.new(0.4, 0, 0, 20)
-levitateSpeedLabel.Position = UDim2.new(0.05, 0, 0.2, 0)
-levitateSpeedLabel.Text = "Levitate Speed:"
-levitateSpeedLabel.TextColor3 = Color3.new(1, 1, 1)
-levitateSpeedLabel.BackgroundTransparency = 1
-levitateSpeedLabel.ZIndex = 2
+-- Function to create evenly spaced elements
+local function createElement(parent, elementType, positionY, labelText, defaultValue, isButton)
+    local elementLabel = Instance.new("TextLabel", parent)
+    elementLabel.Size = UDim2.new(0.4, 0, 0, 20)
+    elementLabel.Position = UDim2.new(0.05, 0, positionY, 0)
+    elementLabel.Text = labelText
+    elementLabel.TextColor3 = Color3.new(1, 1, 1)
+    elementLabel.BackgroundTransparency = 1
+    elementLabel.ZIndex = 2
 
-local levitateSpeedInput = Instance.new("TextBox", frame)
-levitateSpeedInput.Size = UDim2.new(0.4, 0, 0, 20)
-levitateSpeedInput.Position = UDim2.new(0.55, 0, 0.2, 0)
-levitateSpeedInput.Text = "10" -- Default value
-levitateSpeedInput.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-levitateSpeedInput.BackgroundTransparency = 0.5
-levitateSpeedInput.TextColor3 = Color3.new(1, 1, 1)
-levitateSpeedInput.ZIndex = 2
-local speedInputCorner = Instance.new("UICorner", levitateSpeedInput)
-speedInputCorner.CornerRadius = UDim.new(0, 8)
+    local element
+    if isButton then
+        element = Instance.new("TextButton", parent)
+    else
+        element = Instance.new("TextBox", parent)
+    end
+    element.Size = UDim2.new(0.4, 0, 0, 20)
+    element.Position = UDim2.new(0.55, 0, positionY, 0)
+    element.Text = tostring(defaultValue)
+    element.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+    element.BackgroundTransparency = 0.5
+    element.TextColor3 = Color3.new(1, 1, 1)
+    element.ZIndex = 2
+    local elementCorner = Instance.new("UICorner", element)
+    elementCorner.CornerRadius = UDim.new(0, 8)
+
+    return element
+end
+
+-- Calculate positions dynamically
+local numElements = 6 -- Total number of elements (2 speed inputs + 3 keybinds + 1 toggle button)
+local startY = 0.01 -- Starting Y position (10% from the top)
+local spacing = (1 - startY*5 * 2) / (numElements + 1) -- Even spacing between elements
+
+-- Levitate Speed Input
+local levitateSpeedInput = createElement(frame, "TextBox", startY + spacing * 1, "Levitate Speed:", "10", false)
 
 -- Move Speed Input
-local moveSpeedLabel = Instance.new("TextLabel", frame)
-moveSpeedLabel.Size = UDim2.new(0.4, 0, 0, 20)
-moveSpeedLabel.Position = UDim2.new(0.05, 0, 0.35, 0)
-moveSpeedLabel.Text = "Move Speed:"
-moveSpeedLabel.TextColor3 = Color3.new(1, 1, 1)
-moveSpeedLabel.BackgroundTransparency = 1
-moveSpeedLabel.ZIndex = 2
+local moveSpeedInput = createElement(frame, "TextBox", startY + spacing * 2, "Move Speed:", "20", false)
 
-local moveSpeedInput = Instance.new("TextBox", frame)
-moveSpeedInput.Size = UDim2.new(0.4, 0, 0, 20)
-moveSpeedInput.Position = UDim2.new(0.55, 0, 0.35, 0)
-moveSpeedInput.Text = "20" -- Default value
-moveSpeedInput.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-moveSpeedInput.BackgroundTransparency = 0.5
-moveSpeedInput.TextColor3 = Color3.new(1, 1, 1)
-moveSpeedInput.ZIndex = 2
-local moveInputCorner = Instance.new("UICorner", moveSpeedInput)
-moveInputCorner.CornerRadius = UDim.new(0, 8)
+-- Keybind Inputs
+local keybinds = {
+    Up = Enum.KeyCode.Up,
+    Down = Enum.KeyCode.Down,
+    Forward = Enum.KeyCode.W
+}
+
+local function createKeybindInput(labelText, defaultKey, positionY, keybindName)
+    local keybindInput = createElement(frame, "TextButton", positionY, labelText, tostring(defaultKey):gsub("Enum.KeyCode.", ""), true)
+
+    keybindInput.MouseButton1Click:Connect(function()
+        keybindInput.Text = "Press a key..."
+        local input = game:GetService("UserInputService").InputBegan:Wait()
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            keybinds[keybindName] = input.KeyCode
+            keybindInput.Text = tostring(input.KeyCode):gsub("Enum.KeyCode.", "")
+        end
+    end)
+end
+
+-- Create keybind inputs
+createKeybindInput("Up Keybind", keybinds.Up, startY + spacing * 3, "Up")
+createKeybindInput("Down Keybind", keybinds.Down, startY + spacing * 4, "Down")
+createKeybindInput("Forward Keybind", keybinds.Forward, startY + spacing * 5, "Forward")
 
 -- Toggle Levitation Button
-local toggleButton = Instance.new("TextButton", frame)
-toggleButton.Size = UDim2.new(0.9, 0, 0, 30)
-toggleButton.Position = UDim2.new(0.05, 0, 0.55, 0)
-toggleButton.Text = "Toggle Levitation"
-toggleButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-toggleButton.BackgroundTransparency = 0.5
-toggleButton.TextColor3 = Color3.new(1, 1, 1)
-toggleButton.ZIndex = 2
-local toggleCorner = Instance.new("UICorner", toggleButton)
-toggleCorner.CornerRadius = UDim.new(0, 8)
+local toggleButton = createElement(frame, "TextButton", startY + spacing * 6, "Toggle Levitation", "Toggle Levitation", true)
 
 -- Set Speed Button
-local setSpeedButton = Instance.new("TextButton", frame)
-setSpeedButton.Size = UDim2.new(0.9, 0, 0, 30)
-setSpeedButton.Position = UDim2.new(0.05, 0, 0.75, 0)
-setSpeedButton.Text = "Set Speed"
-setSpeedButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-setSpeedButton.BackgroundTransparency = 0.5
-setSpeedButton.TextColor3 = Color3.new(1, 1, 1)
-setSpeedButton.ZIndex = 2
-local setSpeedCorner = Instance.new("UICorner", setSpeedButton)
-setSpeedCorner.CornerRadius = UDim.new(0, 8)
+local setSpeedButton = createElement(frame, "TextButton", startY + spacing * 7, "Set Speed", "Set Speed", true)
 
 -- Variables for the script
 local levitateSpeed = 10
@@ -129,13 +140,13 @@ local function levitateAndRotate()
         seat.CFrame = desiredRotation
 
         local direction = Vector3.new(0, 0, 0)
-        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Up) then
+        if game:GetService("UserInputService"):IsKeyDown(keybinds.Up) then
             direction = direction + Vector3.new(0, 1, 0)
         end
-        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Down) then
+        if game:GetService("UserInputService"):IsKeyDown(keybinds.Down) then
             direction = direction + Vector3.new(0, -1, 0)
         end
-        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
+        if game:GetService("UserInputService"):IsKeyDown(keybinds.Forward) then
             direction = direction + lookVector
         end
 
